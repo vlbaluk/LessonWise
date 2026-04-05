@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { DisplayLesson, Student } from "@/types";
 import { formatMonthDay, formatTime, parseLessonDate } from "@/utils/calendar";
 
@@ -6,25 +6,40 @@ interface LessonDetailModalProps {
   lesson: DisplayLesson | null;
   student: Student | null;
   onClose: () => void;
+  onCancel?: (lessonId: string, reason?: string) => void;
+  onReschedule?: (lesson: DisplayLesson) => void;
 }
 
 export const LessonDetailModal = ({
   lesson,
   student,
   onClose,
+  onCancel,
+  onReschedule,
 }: LessonDetailModalProps) => {
+  const [showCancel, setShowCancel] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+
+  const handleClose = useCallback(() => {
+    setShowCancel(false);
+    setCancelReason("");
+    onClose();
+  }, [onClose]);
+
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        onClose();
+        handleClose();
       }
     };
 
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
-  }, [onClose]);
+  }, [handleClose]);
+
 
   if (!lesson || !student) return null;
+  const canModify = lesson.displayStatus === "scheduled";
 
   const statusLabel =
     lesson.displayStatus === "cancelled"
@@ -53,7 +68,7 @@ export const LessonDetailModal = ({
       <div
         className="absolute inset-0 h-full w-full cursor-default"
         role="presentation"
-        onClick={onClose}
+        onClick={handleClose}
       />
       <div
         role="dialog"
@@ -76,7 +91,7 @@ export const LessonDetailModal = ({
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-500 transition hover:border-slate-300 hover:text-slate-900"
           >
             Close
@@ -121,6 +136,61 @@ export const LessonDetailModal = ({
           {lesson.displayStatus === "rescheduled-new" && rescheduleSource ? (
             <div className="rounded-2xl border border-amber-100 bg-amber-50 p-3 text-xs text-amber-700">
               Original time: {formatMonthDay(rescheduleSource)} · {formatTime(rescheduleSource)}
+            </div>
+          ) : null}
+          {canModify ? (
+            <div className="mt-4 flex flex-col gap-3">
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCancel((prev) => !prev)}
+                  className="rounded-full border border-rose-200 px-4 py-1.5 text-xs font-semibold text-rose-600 transition hover:border-rose-300 hover:text-rose-700"
+                >
+                  Cancel lesson
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onReschedule?.(lesson)}
+                  className="rounded-full border border-amber-200 px-4 py-1.5 text-xs font-semibold text-amber-700 transition hover:border-amber-300 hover:text-amber-800"
+                >
+                  Reschedule
+                </button>
+              </div>
+              {showCancel ? (
+                <div className="rounded-2xl border border-rose-100 bg-rose-50 p-3 text-xs text-rose-700">
+                  <p className="font-semibold text-rose-800">Cancellation reason (optional)</p>
+                  <input
+                    className="mt-2 w-full rounded-xl border border-rose-200 bg-white px-3 py-2 text-xs text-rose-700"
+                    placeholder="Add a reason"
+                    value={cancelReason}
+                    onChange={(event) => setCancelReason(event.target.value)}
+                  />
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onCancel?.(lesson.id, cancelReason);
+                        setCancelReason("");
+                        setShowCancel(false);
+                        handleClose();
+                      }}
+                      className="rounded-full bg-rose-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-rose-600"
+                    >
+                      Confirm cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCancelReason("");
+                        setShowCancel(false);
+                      }}
+                      className="rounded-full border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-600"
+                    >
+                      Keep lesson
+                    </button>
+                  </div>
+                </div>
+              ) : null}
             </div>
           ) : null}
         </div>

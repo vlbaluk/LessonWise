@@ -2,26 +2,37 @@
 
 import { addDays, isSameDay } from "date-fns";
 import { useMemo, useState } from "react";
+import { BookingModal } from "@/components/booking/BookingModal";
+import { RescheduleModal } from "@/components/booking/RescheduleModal";
 import { CalendarHeader } from "@/components/calendar/CalendarHeader";
 import { DayView } from "@/components/calendar/DayView";
 import { LessonDetailModal } from "@/components/calendar/LessonDetailModal";
 import { WeekView } from "@/components/calendar/WeekView";
 import { FilterBar } from "@/components/filters/FilterBar";
 import { Legend } from "@/components/Legend";
-import { lessons, parent, students } from "@/data";
+import { parent, students } from "@/data";
 import { useCalendarNavigation } from "@/hooks/useCalendarNavigation";
 import { useFilters } from "@/hooks/useFilters";
+import { useLessons } from "@/hooks/useLessons";
 import type { DisplayLesson, Student } from "@/types";
 import { formatWeekRange } from "@/utils/calendar";
-import { buildDisplayLessons, filterLessons, getTimeBounds } from "@/utils/lessons";
+import { filterLessons, getTimeBounds } from "@/utils/lessons";
 
-const displayLessons = buildDisplayLessons(lessons);
 const studentsById = students.reduce(
   (acc, student) => ({ ...acc, [student.id]: student }),
   {} as Record<string, Student>,
 );
 
 export default function Home() {
+  const {
+    lessons,
+    displayLessons,
+    tutors,
+    bookLesson,
+    cancelLesson,
+    rescheduleLesson,
+    getTutorForStudentSubject,
+  } = useLessons();
   const {
     selectedStudentIds,
     selectedStatuses,
@@ -77,8 +88,16 @@ export default function Home() {
   const [selectedLesson, setSelectedLesson] = useState<DisplayLesson | null>(
     null,
   );
+  const [isBookingOpen, setIsBookingOpen] = useState(false);
+  const [bookingKey, setBookingKey] = useState(0);
+  const [rescheduleKey, setRescheduleKey] = useState(0);
+  const [rescheduleTarget, setRescheduleTarget] =
+    useState<DisplayLesson | null>(null);
   const selectedStudent = selectedLesson
     ? studentsById[selectedLesson.studentId]
+    : null;
+  const rescheduleStudent = rescheduleTarget
+    ? studentsById[rescheduleTarget.studentId]
     : null;
 
   return (
@@ -91,6 +110,10 @@ export default function Home() {
           onNextWeek={navigation.goNextWeek}
           canPrevWeek={navigation.canPrevWeek}
           canNextWeek={navigation.canNextWeek}
+          onBookLesson={() => {
+            setBookingKey((value) => value + 1);
+            setIsBookingOpen(true);
+          }}
         />
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -146,6 +169,35 @@ export default function Home() {
         lesson={selectedLesson}
         student={selectedStudent}
         onClose={() => setSelectedLesson(null)}
+        onCancel={(lessonId, reason) => {
+          cancelLesson(lessonId, reason);
+          setSelectedLesson(null);
+        }}
+        onReschedule={(lesson) => {
+          setSelectedLesson(null);
+          setRescheduleKey((value) => value + 1);
+          setRescheduleTarget(lesson);
+        }}
+      />
+
+      <BookingModal
+        key={bookingKey}
+        isOpen={isBookingOpen}
+        students={students}
+        lessons={lessons}
+        tutors={tutors}
+        getTutorForStudentSubject={getTutorForStudentSubject}
+        onBook={bookLesson}
+        onClose={() => setIsBookingOpen(false)}
+      />
+
+      <RescheduleModal
+        key={rescheduleKey}
+        isOpen={Boolean(rescheduleTarget)}
+        lesson={rescheduleTarget}
+        student={rescheduleStudent}
+        onReschedule={rescheduleLesson}
+        onClose={() => setRescheduleTarget(null)}
       />
     </div>
   );

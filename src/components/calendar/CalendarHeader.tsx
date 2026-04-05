@@ -5,6 +5,7 @@ interface CalendarHeaderProps {
   onNextWeek: () => void;
   canPrevWeek: boolean;
   canNextWeek: boolean;
+  onBookLesson?: () => void;
 }
 
 export const CalendarHeader = ({
@@ -14,6 +15,7 @@ export const CalendarHeader = ({
   onNextWeek,
   canPrevWeek,
   canNextWeek,
+  onBookLesson,
 }: CalendarHeaderProps) => (
   <div className="flex flex-col gap-4 rounded-3xl border border-white/70 bg-white/80 p-6 shadow-lg backdrop-blur">
     <div className="flex flex-wrap items-center justify-between gap-4">
@@ -29,6 +31,15 @@ export const CalendarHeader = ({
         </p>
       </div>
       <div className="flex items-center gap-2">
+        {onBookLesson ? (
+          <button
+            type="button"
+            onClick={onBookLesson}
+            className="hidden rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 sm:inline-flex"
+          >
+            Book lesson
+          </button>
+        ) : null}
         <button
           type="button"
           onClick={onPrevWeek}
@@ -50,6 +61,15 @@ export const CalendarHeader = ({
         >
           &rarr;
         </button>
+        {onBookLesson ? (
+          <button
+            type="button"
+            onClick={onBookLesson}
+            className="inline-flex rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 sm:hidden"
+          >
+            Book
+          </button>
+        ) : null}
       </div>
     </div>
   </div>
